@@ -26,6 +26,7 @@ export default function App() {
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<ToolkitResult | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [slow, setSlow] = useState(false);
 
@@ -69,6 +70,7 @@ export default function App() {
     setStatus("loading");
     setError(null);
     setSlow(false);
+    setStartedAt(Date.now());
 
     try {
       const response = await run(
@@ -128,6 +130,7 @@ export default function App() {
           status={status}
           result={result}
           latencyMs={latencyMs}
+          startedAt={startedAt}
           error={error}
           slow={slow}
         />

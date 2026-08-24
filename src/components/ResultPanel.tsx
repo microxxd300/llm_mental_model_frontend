@@ -8,6 +8,8 @@ interface ResultPanelProps {
   status: "idle" | "loading" | "error" | "done";
   result: ToolkitResult | null;
   latencyMs: number | null;
+  /** Timestamp the in-flight request began, for the elapsed counter. */
+  startedAt: number | null;
   error: ApiError | null;
   slow: boolean;
 }
@@ -19,6 +21,25 @@ const ERROR_TITLES: Record<string, string> = {
   network: "Could not reach the API",
   unknown: "Something went wrong",
 };
+
+/**
+ * Whole seconds since `startedAt`, ticking while it is non-null.
+ * Derived from a timestamp rather than a counter, so a new request always
+ * starts from zero instead of briefly showing the previous run's total.
+ */
+function useElapsed(startedAt: number | null): number {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (startedAt === null) return;
+    const id = window.setInterval(() => setNow(Date.now()), 500);
+    return () => window.clearInterval(id);
+  }, [startedAt]);
+
+  if (startedAt === null) return 0;
+  return Math.max(0, Math.floor((now - startedAt) / 1000));
+}
+
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -47,9 +68,11 @@ export default function ResultPanel({
   status,
   result,
   latencyMs,
+  startedAt,
   error,
   slow,
 }: ResultPanelProps) {
+  const elapsed = useElapsed(status === "loading" ? startedAt : null);
   if (status === "idle") {
     return (
       <section className="panel panel--empty" aria-live="polite">
@@ -64,11 +87,14 @@ export default function ResultPanel({
   if (status === "loading") {
     return (
       <section className="panel" aria-live="polite" aria-busy="true">
-        <div className="skeleton">
-          <span className="skeleton__line" />
-          <span className="skeleton__line" />
-          <span className="skeleton__line skeleton__line--short" />
-        </div>
+        <p className="working">
+          <span className="spinner working__spinner" aria-hidden="true" />
+          <span>Generating</span>
+          {/* Visual reassurance only; announcing every tick would be noise. */}
+          <span className="working__elapsed" aria-hidden="true">
+            {elapsed}s
+          </span>
+        </p>
         {slow ? (
           <p className="panel__aside">
             Still working. A serverless instance that has been idle can take half a

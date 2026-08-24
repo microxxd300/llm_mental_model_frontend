@@ -365,33 +365,29 @@ kbd {
    Loading and error states
 --------------------------------------------------------------------------- */
 
-.skeleton {
+/* An LLM call is slow and indeterminate, so this shows a number that visibly
+   climbs. A static shimmer reads as "stuck"; a ticking count proves progress. */
+.working {
   display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 5.5rem;
+  color: var(--ink-muted);
+  font-size: var(--step--1);
 }
 
-.skeleton__line {
-  height: 0.85rem;
-  border-radius: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--sunken) 0%,
-    var(--line) 50%,
-    var(--sunken) 100%
-  );
-  background-size: 200% 100%;
-  animation: sweep 1.4s ease-in-out infinite;
+.working__spinner {
+  width: 0.95rem;
+  height: 0.95rem;
+  border-width: 2px;
+  color: var(--ink-faint);
 }
 
-.skeleton__line--short {
-  width: 62%;
-}
-
-@keyframes sweep {
-  to {
-    background-position: -200% 0;
-  }
+.working__elapsed {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
 }
 
 .panel--error {
