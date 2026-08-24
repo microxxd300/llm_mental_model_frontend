@@ -10,13 +10,39 @@ const BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000"
 ).replace(/\/$/, "");
 
+export const MODES = ["summarize", "rewrite", "translate"] as const;
+export type Mode = (typeof MODES)[number];
+
+export const TONES = [
+  "neutral",
+  "formal",
+  "casual",
+  "confident",
+  "friendly",
+] as const;
+export type Tone = (typeof TONES)[number];
+
+/** Each endpoint names its output differently; this maps them to one field. */
+const OUTPUT_KEY: Record<Mode, string> = {
+  summarize: "summary",
+  rewrite: "rewrite",
+  translate: "translation",
+};
+
+export const MODE_LABELS: Record<Mode, { verb: string; result: string }> = {
+  summarize: { verb: "Summarize", result: "Summary" },
+  rewrite: { verb: "Rewrite", result: "Rewrite" },
+  translate: { verb: "Translate", result: "Translation" },
+};
+
 export interface Usage {
   input_tokens: number;
   output_tokens: number;
 }
 
-export interface SummarizeResult {
-  summary: string;
+/** The API result, with the per-endpoint output key normalized to `output`. */
+export interface ToolkitResult {
+  output: string;
   provider: string;
   model: string;
   truncated: boolean;
@@ -80,42 +106,71 @@ function readFields(error: unknown): Record<string, string[]> | undefined {
   return Object.keys(fields).length ? fields : undefined;
 }
 
-function toApiError(status: number, body: Envelope<unknown> | null, retryAfterHeader: string | null): ApiError {
+function toApiError(
+  status: number,
+  body: Envelope<unknown> | null,
+  retryAfterHeader: string | null,
+): ApiError {
   const detail = readDetail(body?.error);
   const fields = readFields(body?.error);
   const retryAfter = retryAfterHeader ? Number(retryAfterHeader) : undefined;
 
   if (status === 400) {
     const first = fields ? Object.values(fields)[0]?.[0] : null;
-    return new ApiError("validation", status, first ?? detail ?? "That input was rejected.", { fields });
+    return new ApiError(
+      "validation",
+      status,
+      first ?? detail ?? "That input was rejected.",
+      { fields },
+    );
   }
   if (status === 429) {
-    return new ApiError("rate_limit", status, detail ?? "Rate limit reached.", { retryAfter });
+    return new ApiError("rate_limit", status, detail ?? "Rate limit reached.", {
+      retryAfter,
+    });
   }
   if (status === 503) {
     return new ApiError("provider", status, detail ?? "The model is unavailable.");
   }
-  return new ApiError("unknown", status, detail ?? body?.message ?? `Request failed (${status}).`);
+  return new ApiError(
+    "unknown",
+    status,
+    detail ?? body?.message ?? `Request failed (${status}).`,
+  );
 }
 
-interface SummarizeResponse {
-  result: SummarizeResult;
+export interface RunOptions {
+  tone?: Tone;
+  targetLanguage?: string;
+}
+
+interface RunResponse {
+  result: ToolkitResult;
   /** Round-trip time measured in the browser, in milliseconds. */
   latencyMs: number;
 }
 
-export async function summarize(
+function buildBody(mode: Mode, text: string, options: RunOptions) {
+  if (mode === "rewrite") return { text, tone: options.tone ?? "neutral" };
+  if (mode === "translate")
+    return { text, target_language: options.targetLanguage ?? "" };
+  return { text };
+}
+
+export async function run(
+  mode: Mode,
   text: string,
+  options: RunOptions = {},
   signal?: AbortSignal,
-): Promise<SummarizeResponse> {
+): Promise<RunResponse> {
   const startedAt = performance.now();
 
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}/api/v1/summarize/`, {
+    response = await fetch(`${BASE_URL}/api/v1/${mode}/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(buildBody(mode, text, options)),
       signal,
     });
   } catch (cause) {
@@ -129,9 +184,9 @@ export async function summarize(
 
   const latencyMs = Math.round(performance.now() - startedAt);
 
-  let body: Envelope<SummarizeResult> | null = null;
+  let body: Envelope<Record<string, unknown>> | null = null;
   try {
-    body = (await response.json()) as Envelope<SummarizeResult>;
+    body = (await response.json()) as Envelope<Record<string, unknown>>;
   } catch {
     body = null;
   }
@@ -140,5 +195,22 @@ export async function summarize(
     throw toApiError(response.status, body, response.headers.get("Retry-After"));
   }
 
-  return { result: body.data, latencyMs };
+  const data = body.data;
+  const output = data[OUTPUT_KEY[mode]];
+  if (typeof output !== "string") {
+    throw new ApiError("unknown", response.status, "The API returned an unexpected shape.");
+  }
+
+  return {
+    result: {
+      output,
+      provider: String(data.provider ?? ""),
+      model: String(data.model ?? ""),
+      truncated: Boolean(data.truncated),
+      usage: data.usage as Usage,
+      cost_usd: String(data.cost_usd ?? "0"),
+      equivalent_cost_usd: (data.equivalent_cost_usd ?? {}) as Record<string, string>,
+    },
+    latencyMs,
+  };
 }

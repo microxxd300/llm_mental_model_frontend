@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 
-import type { ApiError, SummarizeResult } from "../api";
+import { MODE_LABELS, type ApiError, type Mode, type ToolkitResult } from "../api";
 import MetricRail from "./MetricRail";
 
 interface ResultPanelProps {
+  mode: Mode;
   status: "idle" | "loading" | "error" | "done";
-  result: SummarizeResult | null;
+  result: ToolkitResult | null;
   latencyMs: number | null;
   error: ApiError | null;
   slow: boolean;
@@ -42,6 +43,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ResultPanel({
+  mode,
   status,
   result,
   latencyMs,
@@ -52,8 +54,8 @@ export default function ResultPanel({
     return (
       <section className="panel panel--empty" aria-live="polite">
         <p className="panel__placeholder">
-          The summary appears here, with the token usage and cost it took to
-          produce.
+          The {MODE_LABELS[mode].result.toLowerCase()} appears here, with the token
+          usage and cost it took to produce.
         </p>
       </section>
     );
@@ -69,8 +71,8 @@ export default function ResultPanel({
         </div>
         {slow ? (
           <p className="panel__aside">
-            Still working. A serverless instance that has been idle can take
-            half a minute to wake up.
+            Still working. A serverless instance that has been idle can take half a
+            minute to wake up.
           </p>
         ) : null}
       </section>
@@ -80,7 +82,9 @@ export default function ResultPanel({
   if (status === "error" && error) {
     return (
       <section className="panel panel--error" role="alert">
-        <p className="notice__title">{ERROR_TITLES[error.kind] ?? ERROR_TITLES.unknown}</p>
+        <p className="notice__title">
+          {ERROR_TITLES[error.kind] ?? ERROR_TITLES.unknown}
+        </p>
         <p className="notice__body">{error.message}</p>
         {error.kind === "rate_limit" && error.retryAfter ? (
           <p className="notice__meta">
@@ -96,15 +100,15 @@ export default function ResultPanel({
     return (
       <section className="panel" aria-live="polite">
         <div className="panel__head">
-          <h2 className="panel__title">Summary</h2>
-          <CopyButton text={result.summary} />
+          <h2 className="panel__title">{MODE_LABELS[mode].result}</h2>
+          <CopyButton text={result.output} />
         </div>
 
-        <p className="summary">{result.summary}</p>
+        <p className="summary">{result.output}</p>
 
         {result.truncated ? (
           <p className="panel__aside panel__aside--warn">
-            The model hit its output limit, so this summary may be cut off.
+            The model hit its output limit, so this may be cut off.
           </p>
         ) : null}
 

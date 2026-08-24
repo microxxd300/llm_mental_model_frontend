@@ -2,10 +2,10 @@
 
 A single-screen React client for the [AI Text Toolkit API](https://github.com/microxxd300/llm_mental_model).
 
-Paste text, get a summary — and see the token usage, latency, and what the same
-request would have cost on a hosted model. The usage accounting is the point of
-the product, so the interface treats it as the payload rather than as debug
-output.
+Paste text, then summarize, rewrite, or translate it — and see the token usage,
+latency, and what the same request would have cost on a hosted model. The usage
+accounting is the point of the product, so the interface treats it as the payload
+rather than as debug output.
 
 ## Stack
 
@@ -34,12 +34,14 @@ npm run dev
 ```
 src/
 ├── api.ts                     typed client; unwraps the {data, error, message}
-│                              envelope and maps HTTP status to error kinds
+│                              envelope, maps HTTP status to error kinds, and
+│                              normalizes each endpoint's output key
 ├── App.tsx                    state machine: idle → loading → done | error
 ├── index.css                  design tokens, reset, base typography
 ├── app.css                    component styles
 └── components/
-    ├── Composer.tsx           textarea, character counter, submit
+    ├── ModeSwitch.tsx         summarize / rewrite / translate
+    ├── Composer.tsx           textarea, counter, mode-specific inputs, submit
     ├── ResultPanel.tsx        the four states, plus copy-to-clipboard
     └── MetricRail.tsx         token / latency / cost readout
 ```
@@ -63,6 +65,14 @@ control.
 **The accent colour appears in exactly one place.** Only the cost metric and the
 character counter near its limit use it, which is what makes the numbers read as
 the subject of the page.
+
+**Each endpoint names its output differently** — `summary`, `rewrite`,
+`translation` — so `api.ts` normalizes them to a single `output` field. The
+components never branch on which endpoint ran, the same way the backend's service
+layer normalizes two providers into one result shape.
+
+**Switching modes clears the result.** A summary still on screen under a
+"Translation" heading would be actively misleading.
 
 **Cold starts are explained, not hidden.** If a request runs past six seconds the
 panel says why, because a serverless instance waking up looks identical to a

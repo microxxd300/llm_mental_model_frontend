@@ -1,8 +1,17 @@
 import { type KeyboardEvent } from "react";
 
+import { MODE_LABELS, TONES, type Mode, type Tone } from "../api";
+import ModeSwitch from "./ModeSwitch";
+
 interface ComposerProps {
+  mode: Mode;
+  onModeChange: (mode: Mode) => void;
   value: string;
   onChange: (value: string) => void;
+  tone: Tone;
+  onToneChange: (tone: Tone) => void;
+  language: string;
+  onLanguageChange: (language: string) => void;
   onSubmit: () => void;
   disabled: boolean;
   busy: boolean;
@@ -11,8 +20,14 @@ interface ComposerProps {
 }
 
 export default function Composer({
+  mode,
+  onModeChange,
   value,
   onChange,
+  tone,
+  onToneChange,
+  language,
+  onLanguageChange,
   onSubmit,
   disabled,
   busy,
@@ -26,7 +41,7 @@ export default function Composer({
   // Counter earns attention only when the input is actually unusable.
   const counterState = overLimit ? "over" : tooShort ? "short" : "ok";
 
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+  function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
       event.preventDefault();
       onSubmit();
@@ -54,23 +69,63 @@ export default function Composer({
         </span>
       </div>
 
+      <ModeSwitch value={mode} onChange={onModeChange} disabled={busy} />
+
       <textarea
         id="source-text"
         className="composer__input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={handleKeyDown}
-        rows={9}
+        rows={8}
         spellCheck={false}
         placeholder="Paste an article, a set of notes, a transcript…"
         aria-describedby="composer-hint"
       />
 
+      {mode === "rewrite" ? (
+        <div className="field">
+          <label className="field__label" htmlFor="tone">
+            Tone
+          </label>
+          <select
+            id="tone"
+            className="field__control"
+            value={tone}
+            onChange={(event) => onToneChange(event.target.value as Tone)}
+          >
+            {TONES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
+
+      {mode === "translate" ? (
+        <div className="field">
+          <label className="field__label" htmlFor="language">
+            Target language
+          </label>
+          <input
+            id="language"
+            className="field__control"
+            value={language}
+            onChange={(event) => onLanguageChange(event.target.value)}
+            onKeyDown={handleKeyDown}
+            maxLength={40}
+            placeholder="Tagalog, Spanish, Japanese…"
+            autoComplete="off"
+          />
+        </div>
+      ) : null}
+
       <div className="composer__foot">
         <p className="composer__hint" id="composer-hint">
           <kbd>{navigator.platform.includes("Mac") ? "⌘" : "Ctrl"}</kbd>
           <kbd>Enter</kbd>
-          <span>to summarize</span>
+          <span>to run</span>
         </p>
 
         <button
@@ -83,10 +138,10 @@ export default function Composer({
           {busy ? (
             <>
               <span className="spinner" aria-hidden="true" />
-              Summarizing
+              Working
             </>
           ) : (
-            "Summarize"
+            MODE_LABELS[mode].verb
           )}
         </button>
       </div>

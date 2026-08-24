@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { ApiError, summarize, type SummarizeResult } from "./api";
+import {
+  ApiError,
+  run,
+  type Mode,
+  type Tone,
+  type ToolkitResult,
+} from "./api";
 import Composer from "./components/Composer";
 import ResultPanel from "./components/ResultPanel";
 
@@ -12,9 +18,13 @@ const MAX_CHARS = 10_000;
 type Status = "idle" | "loading" | "error" | "done";
 
 export default function App() {
+  const [mode, setMode] = useState<Mode>("summarize");
   const [text, setText] = useState("");
+  const [tone, setTone] = useState<Tone>("neutral");
+  const [language, setLanguage] = useState("");
+
   const [status, setStatus] = useState<Status>("idle");
-  const [result, setResult] = useState<SummarizeResult | null>(null);
+  const [result, setResult] = useState<ToolkitResult | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [slow, setSlow] = useState(false);
@@ -32,13 +42,24 @@ export default function App() {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // A summary left on screen under the "Translate" heading would be a lie.
+  const changeMode = useCallback((next: Mode) => {
+    abortRef.current?.abort();
+    setMode(next);
+    setStatus("idle");
+    setResult(null);
+    setError(null);
+  }, []);
+
   const trimmed = text.trim();
+  const needsLanguage = mode === "translate" && !language.trim();
   const canSubmit =
     trimmed.length >= MIN_CHARS &&
     text.length <= MAX_CHARS &&
+    !needsLanguage &&
     status !== "loading";
 
-  const run = useCallback(async () => {
+  const submit = useCallback(async () => {
     if (!canSubmit) return;
 
     abortRef.current?.abort();
@@ -50,7 +71,12 @@ export default function App() {
     setSlow(false);
 
     try {
-      const response = await summarize(trimmed, controller.signal);
+      const response = await run(
+        mode,
+        trimmed,
+        { tone, targetLanguage: language.trim() },
+        controller.signal,
+      );
       setResult(response.result);
       setLatencyMs(response.latencyMs);
       setStatus("done");
@@ -63,7 +89,7 @@ export default function App() {
       );
       setStatus("error");
     }
-  }, [canSubmit, trimmed]);
+  }, [canSubmit, language, mode, tone, trimmed]);
 
   return (
     <div className="shell">
@@ -71,20 +97,26 @@ export default function App() {
         <div className="masthead__mark">
           <span className="masthead__title">Text&nbsp;Toolkit</span>
           <span className="masthead__rule" aria-hidden="true" />
-          <span className="masthead__kicker">summarize</span>
+          <span className="masthead__kicker">{mode}</span>
         </div>
         <p className="masthead__lede">
-          Summarize text through a language model — and see exactly how many
-          tokens it cost, and what those tokens would have cost on a hosted
-          model.
+          Summarize, rewrite, or translate text through a language model — and see
+          exactly how many tokens it cost, and what those tokens would have cost on
+          a hosted model.
         </p>
       </header>
 
       <main className="stack">
         <Composer
+          mode={mode}
+          onModeChange={changeMode}
           value={text}
           onChange={setText}
-          onSubmit={() => void run()}
+          tone={tone}
+          onToneChange={setTone}
+          language={language}
+          onLanguageChange={setLanguage}
+          onSubmit={() => void submit()}
           disabled={!canSubmit}
           busy={status === "loading"}
           min={MIN_CHARS}
@@ -92,6 +124,7 @@ export default function App() {
         />
 
         <ResultPanel
+          mode={mode}
           status={status}
           result={result}
           latencyMs={latencyMs}

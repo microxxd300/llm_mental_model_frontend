@@ -1,7 +1,7 @@
-import type { SummarizeResult } from "../api";
+import type { ToolkitResult } from "../api";
 
 interface MetricRailProps {
-  result: SummarizeResult;
+  result: ToolkitResult;
   latencyMs: number;
 }
 
