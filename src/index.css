@@ -1,29 +1,32 @@
 /* ---------------------------------------------------------------------------
    Design tokens
-   Warm neutral paper/ink palette with a single ochre accent reserved for
-   measurement. Nothing else in the UI is allowed to use the accent, so the
-   numbers read as the point of the page.
+   White surfaces, near-black ink, one orange. Orange is limited to things that
+   are interactive or measured - the primary action, the active mode, focus
+   rings, and the cost figure - so it still carries meaning rather than
+   decorating everything.
 --------------------------------------------------------------------------- */
 
 :root {
   color-scheme: light dark;
 
-  --paper: #faf9f7;
+  --paper: #ffffff;
   --surface: #ffffff;
-  --sunken: #f2f0ec;
-  --line: #e5e2db;
-  --line-strong: #cec9be;
-  --ink: #1a1917;
-  --ink-muted: #6b675f;
-  --ink-faint: #97928a;
+  --sunken: #f6f6f7;
+  --line: #e6e6e9;
+  --line-strong: #cdcdd2;
+  --ink: #17171a;
+  --ink-muted: #5f6069;
+  --ink-faint: #8d8f98;
 
-  --accent: #8a6014;
-  --accent-soft: #f5edda;
-  --accent-line: #e2d2ae;
+  --accent: #c2410c;
+  --accent-fill: #c2410c;
+  --on-accent: #ffffff;
+  --accent-soft: #fff4ed;
+  --accent-line: #fbd2b8;
 
-  --danger: #a2382a;
-  --danger-soft: #fbeeeb;
-  --danger-line: #eecfc8;
+  --danger: #b3261e;
+  --danger-soft: #fdeeed;
+  --danger-line: #f3cdc9;
 
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
@@ -46,22 +49,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #141312;
-    --surface: #1c1a18;
-    --sunken: #100f0e;
-    --line: #2e2b27;
-    --line-strong: #443f39;
-    --ink: #ece8e1;
-    --ink-muted: #a19b91;
-    --ink-faint: #6f6a62;
+    --paper: #0f0f11;
+    --surface: #17171a;
+    --sunken: #0b0b0d;
+    --line: #26262b;
+    --line-strong: #3a3a42;
+    --ink: #ececef;
+    --ink-muted: #9c9da7;
+    --ink-faint: #6b6c75;
 
-    --accent: #d9a94a;
-    --accent-soft: #262015;
-    --accent-line: #4a3c22;
+    --accent: #fb923c;
+    --accent-fill: #fb923c;
+    --on-accent: #17171a;
+    --accent-soft: #241610;
+    --accent-line: #4b2b18;
 
-    --danger: #e5897a;
-    --danger-soft: #271714;
-    --danger-line: #4e2a23;
+    --danger: #f08b80;
+    --danger-soft: #261513;
+    --danger-line: #4d2823;
 
     --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 16px -8px rgb(0 0 0 / 0.6);
   }
