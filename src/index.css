@@ -125,9 +125,11 @@ textarea {
   border-radius: 3px;
 }
 
+/* Solid accent, not the soft tint: a highlight has to separate clearly from
+   the surface it sits on, in both themes. */
 ::selection {
-  background: var(--accent-soft);
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 @media (prefers-reduced-motion: reduce) {
